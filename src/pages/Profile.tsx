@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Phone, Shield, ArrowLeft, LogOut, CheckCircle, XCircle } from 'lucide-react';
+import { User, Mail, Phone, LogOut, ArrowLeft } from 'lucide-react';
 
 const Profile = () => {
   const { currentUser, logout } = useAuth();
@@ -35,99 +35,76 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] p-4">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Home
-        </Button>
-
-        <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mb-6">
-            <User className="h-10 w-10 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
-          <p className="text-muted-foreground mt-2">Manage your account information</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
         </div>
 
-        <Card className="glass-effect">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Account Information
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <User className="h-10 w-10 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-800">
+              Profile
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4">
-              <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
-                <div className="p-2 bg-background rounded-lg">
-                  <Mail className="h-5 w-5 text-muted-foreground" />
+          <CardContent>
+            <div className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <Mail className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium">{currentUser.email || 'Not provided'}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground">Email Address</p>
-                  <p className="text-sm font-mono break-all">{currentUser.email || 'Not provided'}</p>
+
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <Phone className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">Phone Number</p>
+                    <p className="font-medium">{currentUser.phoneNumber || 'Not provided'}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {currentUser.emailVerified ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {currentUser.emailVerified ? 'Verified' : 'Unverified'}
-                  </span>
+
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <User className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-500">User ID</p>
+                    <p className="font-medium text-xs break-all">{currentUser.uid}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="h-5 w-5 flex items-center justify-center">
+                    <div className={`h-3 w-3 rounded-full ${currentUser.emailVerified ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Email Status</p>
+                    <p className="font-medium">{currentUser.emailVerified ? 'Verified' : 'Not Verified'}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
-                <div className="p-2 bg-background rounded-lg">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
-                  <p className="text-sm">{currentUser.phoneNumber || 'Not provided'}</p>
-                </div>
+              <div className="pt-6 border-t">
+                <Button
+                  onClick={handleLogout}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
-
-              <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
-                <div className="p-2 bg-background rounded-lg">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground">User ID</p>
-                  <p className="text-xs font-mono break-all text-muted-foreground">{currentUser.uid}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 rounded-lg bg-muted/50">
-                <div className="p-2 bg-background rounded-lg">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground">Account Created</p>
-                  <p className="text-sm">
-                    {currentUser.metadata.creationTime 
-                      ? new Date(currentUser.metadata.creationTime).toLocaleDateString()
-                      : 'Unknown'
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t">
-              <Button
-                onClick={handleLogout}
-                variant="destructive"
-                className="w-full"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
             </div>
           </CardContent>
         </Card>
