@@ -1,23 +1,30 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User, Phone } from 'lucide-react';
+import { ConfirmationResult } from 'firebase/auth';
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [step, setStep] = useState<'details' | 'phone' | 'otp' | 'complete'>('details');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, loginWithPhone, confirmPhoneCode } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -41,11 +48,11 @@ const SignUp = () => {
     try {
       setLoading(true);
       await signup(email, password);
+      setStep('phone');
       toast({
-        title: "Success",
-        description: "Account created successfully!",
+        title: "Email verified!",
+        description: "Now let's verify your phone number",
       });
-      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
@@ -57,17 +64,78 @@ const SignUp = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
-            <User className="h-6 w-6" />
-            Sign Up
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+  const handlePhoneVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!phoneNumber.startsWith('+')) {
+      toast({
+        title: "Error",
+        description: "Please include country code (e.g., +1234567890)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await loginWithPhone(phoneNumber);
+      setConfirmationResult(result);
+      setStep('otp');
+      toast({
+        title: "OTP Sent",
+        description: "Check your phone for the verification code",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!confirmationResult || otpCode.length !== 6) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid 6-digit code",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await confirmPhoneCode(confirmationResult, otpCode);
+      setStep('complete');
+      toast({
+        title: "Success",
+        description: "Account created and phone verified successfully!",
+      });
+      
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Invalid verification code",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (step) {
+      case 'details':
+        return (
+          <form onSubmit={handleEmailSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -116,23 +184,139 @@ const SignUp = () => {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
-              {loading ? "Creating Account..." : "Sign Up"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Creating Account..." : "Continue"}
             </Button>
           </form>
+        );
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                Login here
-              </Link>
-            </p>
+      case 'phone':
+        return (
+          <form onSubmit={handlePhoneVerification} className="space-y-4">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Verify Phone Number</h3>
+              <p className="text-sm text-gray-600">We'll send you a code to verify your phone</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500">Include country code (e.g., +1 for US)</p>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Sending Code..." : "Send Verification Code"}
+            </Button>
+            <div id="recaptcha-container"></div>
+          </form>
+        );
+
+      case 'otp':
+        return (
+          <form onSubmit={handleOTPVerification} className="space-y-4">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Enter Verification Code</h3>
+              <p className="text-sm text-gray-600">Enter the 6-digit code sent to {phoneNumber}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(value) => setOtpCode(value)}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading || otpCode.length !== 6}>
+              {loading ? "Verifying..." : "Verify Code"}
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => setStep('phone')}
+              disabled={loading}
+            >
+              Change Phone Number
+            </Button>
+          </form>
+        );
+
+      case 'complete':
+        return (
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800">Account Created Successfully!</h3>
+            <p className="text-gray-600">Your email and phone number have been verified. Redirecting to home page...</p>
           </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+            <User className="h-6 w-6" />
+            Sign Up
+          </CardTitle>
+          {step !== 'complete' && (
+            <div className="flex justify-center mt-4">
+              <div className="flex space-x-2">
+                <div className={`w-2 h-2 rounded-full ${step === 'details' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                <div className={`w-2 h-2 rounded-full ${step === 'phone' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                <div className={`w-2 h-2 rounded-full ${step === 'otp' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+              </div>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          {renderStepContent()}
+
+          {step === 'details' && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Already have an account?{' '}
+                <Link to="/login" className="text-blue-600 hover:underline">
+                  Login here
+                </Link>
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

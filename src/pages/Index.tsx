@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Car } from '@/types/car';
 import { carsData } from '@/data/cars';
 import CarCard from '@/components/CarCard';
@@ -32,6 +31,7 @@ const Index = () => {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     loadCarsData();
@@ -41,8 +41,17 @@ const Index = () => {
     filterCars();
   }, [searchTerm, priceFilter, brandFilter, cars]);
 
-  // Show login popup after 5 seconds if not logged in
+  // Show login popup after 5 seconds if not logged in OR if URL param triggers it
   useEffect(() => {
+    const showLoginParam = searchParams.get('showLogin');
+    
+    if (showLoginParam === 'true') {
+      setIsLoginPopupOpen(true);
+      // Clean up URL parameter
+      setSearchParams({});
+      return;
+    }
+
     if (!currentUser && !loading) {
       const timer = setTimeout(() => {
         setIsLoginPopupOpen(true);
@@ -50,7 +59,7 @@ const Index = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [currentUser, loading]);
+  }, [currentUser, loading, searchParams, setSearchParams]);
 
   const loadCarsData = async () => {
     try {
