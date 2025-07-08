@@ -8,7 +8,7 @@ import AdminUpload from '@/components/AdminUpload';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Car as CarIcon, Search, Filter, Settings } from 'lucide-react';
+import { Car as CarIcon, Search, Filter, Settings, Sparkles } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -143,34 +143,40 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-lg text-gray-600">Loading cars...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-500 mx-auto"></div>
+            <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-blue-500 animate-pulse" />
+          </div>
+          <p className="mt-6 text-lg text-slate-600 font-light">Loading your perfect car...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <header className="bg-white shadow-lg">
-        <div className="container mx-auto px-4 py-6">
+      <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200/50 sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-3 rounded-lg">
-                <CarIcon size={32} className="text-white" />
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-2xl shadow-lg">
+                <CarIcon size={28} className="text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">CarRent Pro</h1>
-                <p className="text-gray-600">Premium Car Rental Service</p>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                  CarRent Pro
+                </h1>
+                <p className="text-slate-500 font-light">Premium Car Rental Experience</p>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowAdminPanel(!showAdminPanel)}
+              className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
             >
               <Settings size={16} className="mr-2" />
               Admin
@@ -181,52 +187,72 @@ const Index = () => {
 
       {/* Admin Panel */}
       {showAdminPanel && (
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex justify-center">
-            <AdminUpload />
+            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-2 shadow-lg">
+              <AdminUpload />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Filter size={20} className="text-gray-600" />
-            <h2 className="text-lg font-semibold">Find Your Perfect Car</h2>
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-12">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-blue-100/60 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <Sparkles size={16} />
+            Premium Car Collection
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4 leading-tight">
+            Find Your Perfect
+            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"> Drive</span>
+          </h2>
+          <p className="text-xl text-slate-600 font-light max-w-2xl mx-auto">
+            Discover our curated collection of premium vehicles, tailored for every journey and occasion.
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8 mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-500 p-2 rounded-xl">
+              <Filter size={20} className="text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-800">Find Your Ideal Car</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search size={20} className="absolute left-3 top-3 text-gray-400" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="relative group">
+              <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <Input
-                placeholder="Search cars..."
+                placeholder="Search by car, brand, or model..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-12 rounded-2xl border-slate-200 bg-white/80 backdrop-blur-sm focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition-all duration-200"
               />
             </div>
             
             <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white/80 backdrop-blur-sm focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition-all duration-200">
                 <SelectValue placeholder="Price Range" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Prices</SelectItem>
-                <SelectItem value="under75">Under $75/day</SelectItem>
-                <SelectItem value="75to150">$75 - $150/day</SelectItem>
-                <SelectItem value="over150">Over $150/day</SelectItem>
+              <SelectContent className="rounded-2xl border-slate-200 bg-white/95 backdrop-blur-sm">
+                <SelectItem value="all" className="rounded-xl">All Prices</SelectItem>
+                <SelectItem value="under75" className="rounded-xl">Under $75/day</SelectItem>
+                <SelectItem value="75to150" className="rounded-xl">$75 - $150/day</SelectItem>
+                <SelectItem value="over150" className="rounded-xl">Over $150/day</SelectItem>
               </SelectContent>
             </Select>
             
             <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white/80 backdrop-blur-sm focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition-all duration-200">
                 <SelectValue placeholder="Brand" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Brands</SelectItem>
+              <SelectContent className="rounded-2xl border-slate-200 bg-white/95 backdrop-blur-sm">
+                <SelectItem value="all" className="rounded-xl">All Brands</SelectItem>
                 {uniqueBrands.map(brand => (
-                  <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                  <SelectItem key={brand} value={brand} className="rounded-xl">{brand}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -234,25 +260,31 @@ const Index = () => {
         </div>
 
         {/* Cars Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCars.map(car => (
-            <CarCard
-              key={car.id}
-              car={car}
-              onBook={handleBookCar}
-              onViewReviews={handleViewReviews}
-            />
+            <div key={car.id} className="transform hover:scale-105 transition-all duration-300">
+              <CarCard
+                car={car}
+                onBook={handleBookCar}
+                onViewReviews={handleViewReviews}
+              />
+            </div>
           ))}
         </div>
 
         {filteredCars.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <div className="text-gray-500 text-lg">
-              No cars found matching your criteria.
+          <div className="text-center py-20">
+            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-12 max-w-md mx-auto">
+              <div className="bg-gradient-to-br from-slate-100 to-slate-200 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+                <Search className="text-slate-500" size={24} />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                No cars found
+              </h3>
+              <p className="text-slate-500">
+                Try adjusting your search criteria or filters to find more options.
+              </p>
             </div>
-            <p className="text-gray-400 mt-2">
-              Try adjusting your search or filters.
-            </p>
           </div>
         )}
       </div>
