@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ const Login = () => {
         title: "Success",
         description: "Logged in successfully!",
       });
-      navigate('/profile');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
@@ -51,7 +50,7 @@ const Login = () => {
         title: "Success",
         description: "Logged in with Google successfully!",
       });
-      navigate('/profile');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
@@ -95,7 +94,7 @@ const Login = () => {
         title: "Success",
         description: "Logged in successfully!",
       });
-      navigate('/profile');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",

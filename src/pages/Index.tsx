@@ -1,16 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Car } from '@/types/car';
 import { carsData } from '@/data/cars';
 import CarCard from '@/components/CarCard';
 import BookingModal from '@/components/BookingModal';
 import ReviewModal from '@/components/ReviewModal';
 import AdminUpload from '@/components/AdminUpload';
+import LoginPopup from '@/components/LoginPopup';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Car as CarIcon, Search, Filter, Settings, Sparkles } from 'lucide-react';
+import { Car as CarIcon, Search, Filter, Settings, Sparkles, LogIn, User } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [cars, setCars] = useState<Car[]>([]);
@@ -18,11 +23,15 @@ const Index = () => {
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [brandFilter, setBrandFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadCarsData();
@@ -31,6 +40,17 @@ const Index = () => {
   useEffect(() => {
     filterCars();
   }, [searchTerm, priceFilter, brandFilter, cars]);
+
+  // Show login popup after 5 seconds if not logged in
+  useEffect(() => {
+    if (!currentUser && !loading) {
+      const timer = setTimeout(() => {
+        setIsLoginPopupOpen(true);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser, loading]);
 
   const loadCarsData = async () => {
     try {
@@ -126,6 +146,15 @@ const Index = () => {
   };
 
   const handleBookCar = (car: Car) => {
+    if (!currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to continue with the purchase",
+        variant: "destructive",
+      });
+      setIsLoginPopupOpen(true);
+      return;
+    }
     setSelectedCar(car);
     setIsBookingModalOpen(true);
   };
@@ -172,15 +201,38 @@ const Index = () => {
                 <p className="text-slate-500 font-light">Premium Car Rental Experience</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdminPanel(!showAdminPanel)}
-              className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
-            >
-              <Settings size={16} className="mr-2" />
-              Admin
-            </Button>
+            <div className="flex items-center gap-4">
+              {currentUser ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/profile')}
+                  className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
+                >
+                  <User size={16} className="mr-2" />
+                  Profile
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsLoginPopupOpen(true)}
+                  className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
+                >
+                  <LogIn size={16} className="mr-2" />
+                  Login
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdminPanel(!showAdminPanel)}
+                className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
+              >
+                <Settings size={16} className="mr-2" />
+                Admin
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -307,6 +359,11 @@ const Index = () => {
           setSelectedCar(null);
         }}
         onReviewSubmitted={handleReviewSubmitted}
+      />
+
+      <LoginPopup
+        isOpen={isLoginPopupOpen}
+        onClose={() => setIsLoginPopupOpen(false)}
       />
     </div>
   );

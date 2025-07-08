@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,7 @@ const SignUp = () => {
         title: "Success",
         description: "Account created successfully!",
       });
-      navigate('/profile');
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
