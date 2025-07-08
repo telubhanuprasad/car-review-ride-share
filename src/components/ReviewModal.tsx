@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 interface ReviewModalProps {
@@ -44,7 +44,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
       const querySnapshot = await getDocs(reviewsQuery);
       const reviewsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        rating: doc.data().rating,
+        comment: doc.data().comment,
+        date: doc.data().date,
+        userName: doc.data().userName,
       })) as Review[];
       
       setReviews(reviewsData);
@@ -81,18 +84,18 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
         date: new Date().toISOString(),
       };
 
-      await addDoc(collection(db, 'reviews'), reviewData);
+      const docRef = await addDoc(collection(db, 'reviews'), reviewData);
 
-      // Reload reviews to get the updated list
-      await loadReviews();
+      // Create the complete review object with the generated ID
+      const completeReview: Review = {
+        id: docRef.id,
+        ...reviewData
+      };
 
-      // Calculate new average rating
-      const allReviews = [...reviews, reviewData as Review];
-      const averageRating = allReviews.reduce((sum, review) => sum + review.rating, 0) / allReviews.length;
+      // Update local state
+      const updatedReviews = [...reviews, completeReview];
+      setReviews(updatedReviews);
 
-      // Update car's average rating in Firestore (if you have a cars collection)
-      // This is optional - you might want to calculate this on the fly
-      
       toast({
         title: "Review Submitted!",
         description: "Thank you for your feedback.",

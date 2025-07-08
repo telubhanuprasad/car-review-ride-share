@@ -1,38 +1,61 @@
-
 import React, { useState, useEffect } from 'react';
 import { Car } from '@/types/car';
 import { carsData } from '@/data/cars';
 import CarCard from '@/components/CarCard';
 import BookingModal from '@/components/BookingModal';
 import ReviewModal from '@/components/ReviewModal';
+import AdminUpload from '@/components/AdminUpload';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Car as CarIcon, Search, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Car as CarIcon, Search, Filter, Settings } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 const Index = () => {
-  const [cars, setCars] = useState<Car[]>(carsData);
-  const [filteredCars, setFilteredCars] = useState<Car[]>(carsData);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [filteredCars, setFilteredCars] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [brandFilter, setBrandFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCarsWithReviews();
+    loadCarsData();
   }, []);
 
   useEffect(() => {
     filterCars();
   }, [searchTerm, priceFilter, brandFilter, cars]);
 
-  const loadCarsWithReviews = async () => {
+  const loadCarsData = async () => {
     try {
+      console.log('Loading cars data from Firebase...');
+      
+      // First, try to load cars from Firebase
+      const carsCollection = collection(db, 'cars');
+      const carsSnapshot = await getDocs(carsCollection);
+      
+      let carsFromFirebase: Car[] = [];
+      
+      if (!carsSnapshot.empty) {
+        console.log('Found cars in Firebase, loading...');
+        carsFromFirebase = carsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Car[];
+      } else {
+        console.log('No cars found in Firebase, using local data');
+        carsFromFirebase = carsData;
+      }
+
+      // Load reviews for each car
       const updatedCars = await Promise.all(
-        carsData.map(async (car) => {
+        carsFromFirebase.map(async (car) => {
           const reviewsQuery = query(
             collection(db, 'reviews'),
             where('carId', '==', car.id)
@@ -40,11 +63,14 @@ const Index = () => {
           const querySnapshot = await getDocs(reviewsQuery);
           const reviews = querySnapshot.docs.map(doc => ({
             id: doc.id,
-            ...doc.data()
+            rating: doc.data().rating,
+            comment: doc.data().comment,
+            date: doc.data().date,
+            userName: doc.data().userName,
           }));
           
           const averageRating = reviews.length > 0
-            ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / reviews.length
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
             : 0;
           
           return {
@@ -56,16 +82,19 @@ const Index = () => {
       );
       
       setCars(updatedCars);
+      console.log('Cars loaded successfully:', updatedCars.length);
     } catch (error) {
-      console.error('Error loading cars with reviews:', error);
+      console.error('Error loading cars:', error);
+      // Fallback to local data if Firebase fails
       setCars(carsData);
+    } finally {
+      setLoading(false);
     }
   };
 
   const filterCars = () => {
     let filtered = cars;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(car =>
         car.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,7 +103,6 @@ const Index = () => {
       );
     }
 
-    // Price filter
     if (priceFilter !== 'all') {
       filtered = filtered.filter(car => {
         switch (priceFilter) {
@@ -90,7 +118,6 @@ const Index = () => {
       });
     }
 
-    // Brand filter
     if (brandFilter !== 'all') {
       filtered = filtered.filter(car => car.brand === brandFilter);
     }
@@ -109,10 +136,21 @@ const Index = () => {
   };
 
   const handleReviewSubmitted = () => {
-    loadCarsWithReviews();
+    loadCarsData();
   };
 
   const uniqueBrands = Array.from(new Set(cars.map(car => car.brand)));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-lg text-gray-600">Loading cars...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -129,9 +167,26 @@ const Index = () => {
                 <p className="text-gray-600">Premium Car Rental Service</p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdminPanel(!showAdminPanel)}
+            >
+              <Settings size={16} className="mr-2" />
+              Admin
+            </Button>
           </div>
         </div>
       </header>
+
+      {/* Admin Panel */}
+      {showAdminPanel && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-center">
+            <AdminUpload />
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="container mx-auto px-4 py-8">
@@ -190,7 +245,7 @@ const Index = () => {
           ))}
         </div>
 
-        {filteredCars.length === 0 && (
+        {filteredCars.length === 0 && !loading && (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">
               No cars found matching your criteria.
