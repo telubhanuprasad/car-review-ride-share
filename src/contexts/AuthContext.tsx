@@ -53,10 +53,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithPhone = async (phoneNumber: string): Promise<ConfirmationResult> => {
+    // Clear any existing recaptcha verifier
+    const recaptchaContainer = document.getElementById('recaptcha-container');
+    if (recaptchaContainer) {
+      recaptchaContainer.innerHTML = '';
+    }
+
+    // Create a new recaptcha verifier with optimized settings
     const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
       size: 'invisible',
+      callback: () => {
+        console.log('reCAPTCHA verified');
+      },
+      'expired-callback': () => {
+        console.log('reCAPTCHA expired');
+      }
     });
-    return await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+
+    try {
+      // Render the recaptcha verifier first to speed up the process
+      await recaptchaVerifier.render();
+      console.log('reCAPTCHA rendered successfully');
+      
+      const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      console.log('SMS sent successfully');
+      return result;
+    } catch (error) {
+      console.error('Phone verification error:', error);
+      // Clean up the verifier on error
+      try {
+        recaptchaVerifier.clear();
+      } catch (clearError) {
+        console.error('Error clearing recaptcha:', clearError);
+      }
+      throw error;
+    }
   };
 
   const confirmPhoneCode = async (confirmationResult: ConfirmationResult, code: string) => {

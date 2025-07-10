@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,7 +19,7 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('+91');
   const [otpCode, setOtpCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [step, setStep] = useState<'details' | 'phone' | 'otp' | 'complete'>('details');
@@ -32,7 +31,7 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
     setEmail('');
     setPassword('');
     setConfirmPassword('');
-    setPhoneNumber('');
+    setPhoneNumber('+91');
     setOtpCode('');
     setConfirmationResult(null);
     setStep('details');
@@ -90,7 +89,16 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
     if (!phoneNumber.startsWith('+')) {
       toast({
         title: "Error",
-        description: "Please include country code (e.g., +1234567890)",
+        description: "Please include country code (e.g., +91xxxxxxxxxx)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (phoneNumber.length < 13) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number",
         variant: "destructive",
       });
       return;
@@ -106,9 +114,10 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
         description: "Check your phone for the verification code",
       });
     } catch (error: any) {
+      console.log('Phone verification error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to send OTP. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -225,14 +234,14 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
                 <Input
                   id="signup-phone"
                   type="tel"
-                  placeholder="+1234567890"
+                  placeholder="+91xxxxxxxxxx"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="pl-10"
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500">Include country code (e.g., +1 for US)</p>
+              <p className="text-xs text-gray-500">Enter your 10-digit mobile number</p>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
