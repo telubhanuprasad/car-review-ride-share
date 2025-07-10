@@ -7,6 +7,7 @@ import BookingModal from '@/components/BookingModal';
 import ReviewModal from '@/components/ReviewModal';
 import AdminUpload from '@/components/AdminUpload';
 import LoginPopup from '@/components/LoginPopup';
+import SignUpPopup from '@/components/SignUpPopup';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const Index = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
+  const [isSignUpPopupOpen, setIsSignUpPopupOpen] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
@@ -41,13 +43,19 @@ const Index = () => {
     filterCars();
   }, [searchTerm, priceFilter, brandFilter, cars]);
 
-  // Show login popup after 5 seconds if not logged in OR if URL param triggers it
+  // Show login/signup popup based on URL params or after 5 seconds if not logged in
   useEffect(() => {
     const showLoginParam = searchParams.get('showLogin');
+    const showSignupParam = searchParams.get('showSignup');
     
     if (showLoginParam === 'true') {
       setIsLoginPopupOpen(true);
-      // Clean up URL parameter
+      setSearchParams({});
+      return;
+    }
+
+    if (showSignupParam === 'true') {
+      setIsSignUpPopupOpen(true);
       setSearchParams({});
       return;
     }
@@ -175,6 +183,16 @@ const Index = () => {
 
   const handleReviewSubmitted = () => {
     loadCarsData();
+  };
+
+  const handleSwitchToSignUp = () => {
+    setIsLoginPopupOpen(false);
+    setIsSignUpPopupOpen(true);
+  };
+
+  const handleSwitchToLogin = () => {
+    setIsSignUpPopupOpen(false);
+    setIsLoginPopupOpen(true);
   };
 
   const uniqueBrands = Array.from(new Set(cars.map(car => car.brand)));
@@ -373,6 +391,13 @@ const Index = () => {
       <LoginPopup
         isOpen={isLoginPopupOpen}
         onClose={() => setIsLoginPopupOpen(false)}
+        onSwitchToSignUp={handleSwitchToSignUp}
+      />
+
+      <SignUpPopup
+        isOpen={isSignUpPopupOpen}
+        onClose={() => setIsSignUpPopupOpen(false)}
+        onSwitchToLogin={handleSwitchToLogin}
       />
     </div>
   );

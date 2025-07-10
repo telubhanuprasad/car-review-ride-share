@@ -11,14 +11,26 @@ import { Mail, Lock, LogIn } from 'lucide-react';
 interface LoginPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  onSwitchToSignUp: () => void;
 }
 
-const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose }) => {
+const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose, onSwitchToSignUp }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
+
+  const resetForm = () => {
+    setEmail('');
+    setPassword('');
+    setLoading(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +41,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose }) => {
         title: "Success",
         description: "Logged in successfully!",
       });
-      onClose();
+      handleClose();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -49,7 +61,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose }) => {
         title: "Success",
         description: "Logged in with Google successfully!",
       });
-      onClose();
+      handleClose();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -62,7 +74,7 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -145,6 +157,18 @@ const LoginPopup: React.FC<LoginPopupProps> = ({ isOpen, onClose }) => {
           </svg>
           Continue with Google
         </Button>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <button
+              onClick={onSwitchToSignUp}
+              className="text-blue-600 hover:underline font-medium"
+            >
+              Sign up here
+            </button>
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );
