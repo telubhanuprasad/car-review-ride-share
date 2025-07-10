@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, Phone, UserPlus } from 'lucide-react';
+import { Mail, Lock, Phone, UserPlus, User } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -20,6 +20,7 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -29,6 +30,7 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setUsername('');
     setPhoneNumber('');
     setLoading(false);
   };
@@ -59,6 +61,15 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
       return;
     }
 
+    if (!username.trim()) {
+      toast({
+        title: "Error",
+        description: "Username is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const userCredential = await signup(email, password);
@@ -67,8 +78,8 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
       if (userCredential?.user) {
         await setDoc(doc(db, 'users', userCredential.user.uid), {
           email: email,
+          username: username,
           phoneNumber: phoneNumber,
-          username: '',
           profilePhoto: ''
         });
       }
@@ -100,6 +111,22 @@ const SignUpPopup: React.FC<SignUpPopupProps> = ({ isOpen, onClose, onSwitchToLo
         </DialogHeader>
         
         <form onSubmit={handleSignup} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="signup-username">Username</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="signup-username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="signup-email">Email</Label>
             <div className="relative">

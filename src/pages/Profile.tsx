@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Phone, LogOut, ArrowLeft, Save, Edit2 } from 'lucide-react';
+import { User, Mail, Phone, LogOut, ArrowLeft, Save, Edit2, Camera } from 'lucide-react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -23,8 +23,10 @@ const Profile = () => {
   const { currentUser, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     username: '',
     email: currentUser?.email || '',
@@ -86,6 +88,67 @@ const Profile = () => {
     }
   };
 
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        
+        // Update profile with new photo
+        const updatedProfile = { ...profile, profilePhoto: base64String };
+        setProfile(updatedProfile);
+        
+        // Save to database
+        await setDoc(doc(db, 'users', currentUser.uid), updatedProfile);
+        
+        toast({
+          title: "Success",
+          description: "Profile photo updated successfully!",
+        });
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -124,13 +187,28 @@ const Profile = () => {
 
         <Card>
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <Avatar className="w-20 h-20">
+            <div className="mx-auto mb-4 relative">
+              <Avatar className="w-20 h-20 cursor-pointer group" onClick={handlePhotoClick}>
                 <AvatarImage src={profile.profilePhoto} alt="Profile" />
                 <AvatarFallback className="bg-blue-100 text-blue-600">
                   <User className="h-10 w-10" />
                 </AvatarFallback>
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="h-6 w-6 text-white" />
+                </div>
               </Avatar>
+              {uploadingPhoto && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full"></div>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
               Profile
@@ -185,17 +263,6 @@ const Profile = () => {
                       placeholder="Enter your phone number"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="profilePhoto">Profile Photo URL</Label>
-                  <Input
-                    id="profilePhoto"
-                    value={profile.profilePhoto}
-                    onChange={(e) => setProfile(prev => ({ ...prev, profilePhoto: e.target.value }))}
-                    disabled={!isEditing}
-                    placeholder="Enter profile photo URL"
-                  />
                 </div>
 
                 <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
