@@ -10,14 +10,15 @@ import {
   RecaptchaVerifier,
   ConfirmationResult,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  UserCredential
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 
 interface AuthContextType {
   currentUser: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<UserCredential>;
   loginWithGoogle: () => Promise<void>;
   loginWithPhone: (phoneNumber: string) => Promise<ConfirmationResult>;
   confirmPhoneCode: (confirmationResult: ConfirmationResult, code: string) => Promise<void>;
@@ -39,8 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+  const signup = async (email: string, password: string): Promise<UserCredential> => {
+    return await createUserWithEmailAndPassword(auth, email, password);
   };
 
   const login = async (email: string, password: string) => {
