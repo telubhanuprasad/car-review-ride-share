@@ -108,6 +108,8 @@ const Index = () => {
             comment: doc.data().comment,
             date: doc.data().date,
             userName: doc.data().userName,
+            userId: doc.data().userId || '',
+            bookingId: doc.data().bookingId || '',
           }));
           
           const averageRating = reviews.length > 0
