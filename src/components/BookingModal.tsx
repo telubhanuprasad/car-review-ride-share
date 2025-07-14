@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Car, BookingData } from '@/types/car';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,34 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
     customerPhone: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalDays, setTotalDays] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
+
+  // Calculate total days and price whenever dates change
+  useEffect(() => {
+    if (formData.pickupDate && formData.returnDate && car) {
+      const pickupDate = new Date(formData.pickupDate);
+      const returnDate = new Date(formData.returnDate);
+      const days = Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (days > 0) {
+        setTotalDays(days);
+        setTotalPrice(days * car.price);
+      } else {
+        setTotalDays(0);
+        setTotalPrice(0);
+      }
+    } else {
+      setTotalDays(0);
+      setTotalPrice(0);
+    }
+  }, [formData.pickupDate, formData.returnDate, car]);
+
+  const validatePhoneNumber = (phone: string) => {
+    // Remove all non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '');
+    return digitsOnly.length === 10;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,12 +78,18 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
       return;
     }
 
-    // Calculate total days and price
-    const pickupDate = new Date(formData.pickupDate);
-    const returnDate = new Date(formData.returnDate);
-    const days = Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (days <= 0) {
+    // Phone number validation
+    if (!formData.customerPhone || !validatePhoneNumber(formData.customerPhone)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Phone number must be exactly 10 digits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Date validation
+    if (totalDays <= 0) {
       toast({
         title: "Invalid Dates",
         description: "Return date must be after pickup date.",
@@ -63,8 +97,6 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
       });
       return;
     }
-
-    const totalPrice = days * car.price;
 
     setIsSubmitting(true);
 
@@ -81,7 +113,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
         customerPhone: formData.customerPhone,
         userId: currentUser.uid,
         totalPrice,
-        days,
+        days: totalDays,
         bookingDate: new Date().toISOString(),
       };
 
@@ -89,7 +121,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
 
       toast({
         title: "Booking Confirmed!",
-        description: `Your ${car.name} has been booked for ${days} days. Total: $${totalPrice}`,
+        description: `Your ${car.name} has been booked for ${totalDays} days. Total: $${totalPrice}`,
       });
 
       onClose();
@@ -114,10 +146,23 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // For phone number, only allow digits and limit to 10
+    if (name === 'customerPhone') {
+      const digitsOnly = value.replace(/\D/g, '');
+      if (digitsOnly.length <= 10) {
+        setFormData({
+          ...formData,
+          [name]: digitsOnly,
+        });
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   if (!car) return null;
@@ -190,15 +235,32 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
               type="tel"
               value={formData.customerPhone}
               onChange={handleInputChange}
-              placeholder="Enter your phone number"
+              placeholder="Enter 10-digit phone number"
+              maxLength={10}
+              required
             />
+            {formData.customerPhone && !validatePhoneNumber(formData.customerPhone) && (
+              <p className="text-sm text-red-500 mt-1">Phone number must be exactly 10 digits</p>
+            )}
           </div>
           
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between items-center">
               <span className="font-semibold">Daily Rate:</span>
               <span>${car.price}/day</span>
             </div>
+            {totalDays > 0 && (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Total Days:</span>
+                  <span>{totalDays} days</span>
+                </div>
+                <div className="flex justify-between items-center border-t pt-2">
+                  <span className="font-bold text-lg">Total Price:</span>
+                  <span className="font-bold text-lg text-green-600">${totalPrice}</span>
+                </div>
+              </>
+            )}
           </div>
           
           <div className="flex gap-2">
