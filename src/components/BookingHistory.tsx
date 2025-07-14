@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -21,7 +22,7 @@ const BookingHistory = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [carIdFilter, setCarIdFilter] = useState('');
-  const [emailFilter, setEmailFilter] = useState('');
+  const [reviewStatusFilter, setReviewStatusFilter] = useState('all');
 
   useEffect(() => {
     if (currentUser) {
@@ -35,7 +36,7 @@ const BookingHistory = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, carIdFilter, emailFilter]);
+  }, [bookings, carIdFilter, reviewStatusFilter]);
 
   const loadBookingHistory = async () => {
     if (!currentUser) {
@@ -122,10 +123,12 @@ const BookingHistory = () => {
       );
     }
 
-    if (emailFilter.trim()) {
-      filtered = filtered.filter(booking => 
-        booking.customerEmail?.toLowerCase().includes(emailFilter.toLowerCase())
-      );
+    if (reviewStatusFilter !== 'all') {
+      if (reviewStatusFilter === 'pending') {
+        filtered = filtered.filter(booking => !booking.hasReview);
+      } else if (reviewStatusFilter === 'reviewed') {
+        filtered = filtered.filter(booking => booking.hasReview);
+      }
     }
 
     setFilteredBookings(filtered);
@@ -134,7 +137,7 @@ const BookingHistory = () => {
 
   const clearFilters = () => {
     setCarIdFilter('');
-    setEmailFilter('');
+    setReviewStatusFilter('all');
   };
 
   const handleReviewClick = (booking: BookingData) => {
@@ -230,21 +233,24 @@ const BookingHistory = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Customer Email</Label>
-              <Input
-                id="email"
-                placeholder="Search by email"
-                value={emailFilter}
-                onChange={(e) => setEmailFilter(e.target.value)}
-                className="w-full"
-              />
+              <Label htmlFor="reviewStatus">Review Status</Label>
+              <Select value={reviewStatusFilter} onValueChange={setReviewStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All bookings" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All bookings</SelectItem>
+                  <SelectItem value="pending">Pending Review</SelectItem>
+                  <SelectItem value="reviewed">Reviewed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-end">
               <Button
                 variant="outline"
                 onClick={clearFilters}
                 className="w-full"
-                disabled={!carIdFilter && !emailFilter}
+                disabled={!carIdFilter && reviewStatusFilter === 'all'}
               >
                 Clear Filters
               </Button>
@@ -261,7 +267,6 @@ const BookingHistory = () => {
               <TableRow>
                 <TableHead>Car</TableHead>
                 <TableHead>Car ID</TableHead>
-                <TableHead>Customer Email</TableHead>
                 <TableHead>Dates</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
@@ -291,12 +296,6 @@ const BookingHistory = () => {
                     <code className="text-xs bg-gray-100 px-2 py-1 rounded">
                       {booking.carId || 'N/A'}
                     </code>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{booking.customerEmail || 'N/A'}</p>
-                      <p className="text-xs text-gray-600">{booking.customerName || 'N/A'}</p>
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
