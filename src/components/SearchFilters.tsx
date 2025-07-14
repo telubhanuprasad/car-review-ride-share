@@ -23,6 +23,9 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   setBrandFilter,
   uniqueBrands
 }) => {
+  // Filter out empty or falsy brand values
+  const validBrands = uniqueBrands.filter(brand => brand && brand.trim() !== '');
+
   return (
     <div className="bg-white/60 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-8 mb-12">
       <div className="flex items-center gap-3 mb-6">
@@ -61,7 +64,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           </SelectTrigger>
           <SelectContent className="rounded-2xl border-slate-200 bg-white/95 backdrop-blur-sm">
             <SelectItem value="all" className="rounded-xl">All Brands</SelectItem>
-            {uniqueBrands.map(brand => (
+            {validBrands.map(brand => (
               <SelectItem key={brand} value={brand} className="rounded-xl">{brand}</SelectItem>
             ))}
           </SelectContent>
