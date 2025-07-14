@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BookingData } from '@/types/car';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -266,7 +265,6 @@ const BookingHistory = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Car</TableHead>
-                <TableHead>Car ID</TableHead>
                 <TableHead>Dates</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
@@ -291,11 +289,6 @@ const BookingHistory = () => {
                         <p className="text-sm text-gray-600">${booking.carPrice || 0}/day</p>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                      {booking.carId || 'N/A'}
-                    </code>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
