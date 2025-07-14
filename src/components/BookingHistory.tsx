@@ -25,7 +25,11 @@ const BookingHistory = () => {
 
   useEffect(() => {
     if (currentUser) {
+      console.log('Current user ID:', currentUser.uid);
       loadBookingHistory();
+    } else {
+      console.log('No current user found');
+      setLoading(false);
     }
   }, [currentUser]);
 
@@ -34,39 +38,72 @@ const BookingHistory = () => {
   }, [bookings, carIdFilter, emailFilter]);
 
   const loadBookingHistory = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.log('No current user - cannot load bookings');
+      return;
+    }
 
     try {
+      console.log('Loading bookings for user:', currentUser.uid);
+      
+      // First, let's get all bookings to see what's in the database
+      const allBookingsQuery = query(collection(db, 'bookings'));
+      const allBookingsSnapshot = await getDocs(allBookingsQuery);
+      console.log('Total bookings in database:', allBookingsSnapshot.size);
+      
+      allBookingsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        console.log('Booking document:', doc.id, data);
+      });
+
+      // Now get bookings for the current user
       const bookingsQuery = query(
         collection(db, 'bookings'),
-        where('userId', '==', currentUser.uid),
-        orderBy('bookingDate', 'desc')
+        where('userId', '==', currentUser.uid)
       );
       
       const querySnapshot = await getDocs(bookingsQuery);
-      const bookingsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as BookingData[];
+      console.log('User bookings found:', querySnapshot.size);
+      
+      const bookingsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Processing booking:', doc.id, data);
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as BookingData[];
 
-      console.log('Loaded bookings:', bookingsData);
+      console.log('Processed bookings data:', bookingsData);
+
+      // Sort by booking date (most recent first)
+      bookingsData.sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime());
 
       // Check which bookings have reviews
       const bookingsWithReviewStatus = await Promise.all(
         bookingsData.map(async (booking) => {
-          const reviewsQuery = query(
-            collection(db, 'reviews'),
-            where('bookingId', '==', booking.id),
-            where('userId', '==', currentUser.uid)
-          );
-          const reviewSnapshot = await getDocs(reviewsQuery);
-          return {
-            ...booking,
-            hasReview: !reviewSnapshot.empty
-          };
+          try {
+            const reviewsQuery = query(
+              collection(db, 'reviews'),
+              where('bookingId', '==', booking.id),
+              where('userId', '==', currentUser.uid)
+            );
+            const reviewSnapshot = await getDocs(reviewsQuery);
+            return {
+              ...booking,
+              hasReview: !reviewSnapshot.empty
+            };
+          } catch (error) {
+            console.error('Error checking reviews for booking:', booking.id, error);
+            return {
+              ...booking,
+              hasReview: false
+            };
+          }
         })
       );
 
+      console.log('Final bookings with review status:', bookingsWithReviewStatus);
       setBookings(bookingsWithReviewStatus);
     } catch (error) {
       console.error('Error loading booking history:', error);
@@ -80,14 +117,14 @@ const BookingHistory = () => {
 
     if (carIdFilter.trim()) {
       filtered = filtered.filter(booking => 
-        booking.carId.toLowerCase().includes(carIdFilter.toLowerCase()) ||
-        booking.carName.toLowerCase().includes(carIdFilter.toLowerCase())
+        booking.carId?.toLowerCase().includes(carIdFilter.toLowerCase()) ||
+        booking.carName?.toLowerCase().includes(carIdFilter.toLowerCase())
       );
     }
 
     if (emailFilter.trim()) {
       filtered = filtered.filter(booking => 
-        booking.customerEmail.toLowerCase().includes(emailFilter.toLowerCase())
+        booking.customerEmail?.toLowerCase().includes(emailFilter.toLowerCase())
       );
     }
 
@@ -114,15 +151,23 @@ const BookingHistory = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-6">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="text-center py-8">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading booking history...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">Please log in</h3>
+          <p className="text-gray-500">You need to be logged in to view your booking history.</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -133,6 +178,13 @@ const BookingHistory = () => {
           <Car className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-600 mb-2">No bookings yet</h3>
           <p className="text-gray-500">Your booking history will appear here once you rent a car.</p>
+          <Button 
+            onClick={loadBookingHistory} 
+            variant="outline" 
+            className="mt-4"
+          >
+            Refresh
+          </Button>
         </CardContent>
       </Card>
     );
@@ -147,6 +199,14 @@ const BookingHistory = () => {
         {filteredBookings.length !== bookings.length && (
           <Badge variant="outline">{filteredBookings.length} filtered</Badge>
         )}
+        <Button 
+          onClick={loadBookingHistory} 
+          variant="outline" 
+          size="sm"
+          className="ml-auto"
+        >
+          Refresh
+        </Button>
       </div>
 
       {/* Filter Section */}
@@ -214,39 +274,42 @@ const BookingHistory = () => {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <img
-                        src={booking.carImage}
-                        alt={booking.carName}
+                        src={booking.carImage || '/placeholder.svg'}
+                        alt={booking.carName || 'Car'}
                         className="w-12 h-12 object-cover rounded"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.svg';
+                        }}
                       />
                       <div>
-                        <p className="font-medium">{booking.carName}</p>
-                        <p className="text-sm text-gray-600">${booking.carPrice}/day</p>
+                        <p className="font-medium">{booking.carName || 'Unknown Car'}</p>
+                        <p className="text-sm text-gray-600">${booking.carPrice || 0}/day</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                      {booking.carId}
+                      {booking.carId || 'N/A'}
                     </code>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="text-sm">{booking.customerEmail}</p>
-                      <p className="text-xs text-gray-600">{booking.customerName}</p>
+                      <p className="text-sm">{booking.customerEmail || 'N/A'}</p>
+                      <p className="text-xs text-gray-600">{booking.customerName || 'N/A'}</p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <p>Pick: {new Date(booking.pickupDate).toLocaleDateString()}</p>
-                      <p>Return: {new Date(booking.returnDate).toLocaleDateString()}</p>
-                      <p className="text-gray-600">{booking.days} days</p>
+                      <p>Pick: {booking.pickupDate ? new Date(booking.pickupDate).toLocaleDateString() : 'N/A'}</p>
+                      <p>Return: {booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-gray-600">{booking.days || 0} days</p>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-right">
-                      <p className="font-semibold">${booking.totalPrice}</p>
+                      <p className="font-semibold">${booking.totalPrice || 0}</p>
                       <p className="text-xs text-gray-600">
-                        Booked: {new Date(booking.bookingDate).toLocaleDateString()}
+                        Booked: {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                   </TableCell>
