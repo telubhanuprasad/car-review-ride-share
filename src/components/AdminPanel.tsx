@@ -24,8 +24,6 @@ interface CarFormData {
   seating: number;
   year: number;
   price: number;
-  rating: number;
-  reviewCount: number;
   image: string;
   gallery: string;
   features: string;
@@ -49,8 +47,6 @@ const AdminPanel: React.FC = () => {
       seating: 4,
       year: new Date().getFullYear(),
       price: 0,
-      rating: 0,
-      reviewCount: 0,
       image: '',
       gallery: '',
       features: ''
@@ -91,7 +87,7 @@ const AdminPanel: React.FC = () => {
         seats: data.seating,
         features: data.features.split(',').map(f => f.trim()).filter(f => f),
         reviews: [],
-        averageRating: data.rating
+        averageRating: 0
       };
 
       if (editingCar) {
@@ -139,8 +135,6 @@ const AdminPanel: React.FC = () => {
       seating: car.seats,
       year: car.year,
       price: car.price,
-      rating: car.averageRating || 0,
-      reviewCount: car.reviews?.length || 0,
       image: car.image,
       gallery: car.image, // Using main image as gallery if not available
       features: car.features?.join(', ') || ''
@@ -339,34 +333,6 @@ const AdminPanel: React.FC = () => {
 
                   <FormField
                     control={form.control}
-                    name="rating"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Rating</FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.1" min="0" max="5" placeholder="Rating (0-5)" {...field} onChange={(e) => field.onChange(parseFloat(e.target.value))} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="reviewCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Review Count</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Number of reviews" {...field} onChange={(e) => field.onChange(parseInt(e.target.value))} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="image"
                     render={({ field }) => (
                       <FormItem>
@@ -452,7 +418,6 @@ const AdminPanel: React.FC = () => {
                   <TableHead>Type</TableHead>
                   <TableHead>Year</TableHead>
                   <TableHead>Price</TableHead>
-                  <TableHead>Rating</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -463,7 +428,6 @@ const AdminPanel: React.FC = () => {
                     <TableCell>{car.brand}</TableCell>
                     <TableCell>{car.year}</TableCell>
                     <TableCell>${car.price}/day</TableCell>
-                    <TableCell>{car.averageRating?.toFixed(1) || 0}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
