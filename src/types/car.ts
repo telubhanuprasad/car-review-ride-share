@@ -21,13 +21,24 @@ export interface Review {
   comment: string;
   date: string;
   userName: string;
+  userId: string;
+  bookingId: string;
 }
 
 export interface BookingData {
+  id?: string;
   carId: string;
+  carName: string;
+  carImage: string;
+  carPrice: number;
   pickupDate: string;
   returnDate: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  userId: string;
+  totalPrice: number;
+  days: number;
+  bookingDate: string;
+  hasReview?: boolean;
 }

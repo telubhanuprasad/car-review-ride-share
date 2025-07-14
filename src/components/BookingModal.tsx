@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 
 interface BookingModalProps {
   car: Car | null;
@@ -15,16 +18,27 @@ interface BookingModalProps {
 
 const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     pickupDate: '',
     returnDate: '',
-    customerName: '',
-    customerEmail: '',
+    customerName: currentUser?.displayName || '',
+    customerEmail: currentUser?.email || '',
     customerPhone: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!currentUser || !car) {
+      toast({
+        title: "Authentication Error",
+        description: "Please login to continue with booking.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Basic validation
     if (!formData.pickupDate || !formData.returnDate || !formData.customerName || !formData.customerEmail) {
@@ -40,28 +54,63 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
     const pickupDate = new Date(formData.pickupDate);
     const returnDate = new Date(formData.returnDate);
     const days = Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
-    const totalPrice = days * (car?.price || 0);
+    
+    if (days <= 0) {
+      toast({
+        title: "Invalid Dates",
+        description: "Return date must be after pickup date.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    toast({
-      title: "Booking Confirmed!",
-      description: `Your ${car?.name} has been booked for ${days} days. Total: $${totalPrice}`,
-    });
+    const totalPrice = days * car.price;
 
-    console.log('Booking data:', {
-      ...formData,
-      carId: car?.id,
-      totalPrice,
-      days,
-    });
+    setIsSubmitting(true);
 
-    onClose();
-    setFormData({
-      pickupDate: '',
-      returnDate: '',
-      customerName: '',
-      customerEmail: '',
-      customerPhone: '',
-    });
+    try {
+      const bookingData: Omit<BookingData, 'id'> = {
+        carId: car.id,
+        carName: car.name,
+        carImage: car.image,
+        carPrice: car.price,
+        pickupDate: formData.pickupDate,
+        returnDate: formData.returnDate,
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone,
+        userId: currentUser.uid,
+        totalPrice,
+        days,
+        bookingDate: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, 'bookings'), bookingData);
+
+      toast({
+        title: "Booking Confirmed!",
+        description: `Your ${car.name} has been booked for ${days} days. Total: $${totalPrice}`,
+      });
+
+      onClose();
+      setFormData({
+        pickupDate: '',
+        returnDate: '',
+        customerName: currentUser?.displayName || '',
+        customerEmail: currentUser?.email || '',
+        customerPhone: '',
+      });
+      
+    } catch (error) {
+      console.error('Error saving booking:', error);
+      toast({
+        title: "Booking Failed",
+        description: "Failed to save booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,8 +205,8 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Confirm Booking
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
+              {isSubmitting ? 'Processing...' : 'Confirm Booking'}
             </Button>
           </div>
         </form>

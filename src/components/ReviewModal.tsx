@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Car, Review } from '@/types/car';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Star } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 interface ReviewModalProps {
@@ -18,14 +14,8 @@ interface ReviewModalProps {
 }
 
 const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onReviewSubmitted }) => {
-  const { toast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [newReview, setNewReview] = useState({
-    rating: 0,
-    comment: '',
-    userName: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (car && isOpen) {
@@ -36,6 +26,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
   const loadReviews = async () => {
     if (!car) return;
     
+    setLoading(true);
     try {
       const reviewsQuery = query(
         collection(db, 'reviews'),
@@ -48,83 +39,26 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
         comment: doc.data().comment,
         date: doc.data().date,
         userName: doc.data().userName,
+        userId: doc.data().userId,
+        bookingId: doc.data().bookingId,
       })) as Review[];
       
       setReviews(reviewsData);
     } catch (error) {
       console.error('Error loading reviews:', error);
-    }
-  };
-
-  const handleRatingClick = (rating: number) => {
-    setNewReview({ ...newReview, rating });
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!car || !newReview.rating || !newReview.comment.trim() || !newReview.userName.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields and select a rating.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Add new review to Firestore
-      const reviewData = {
-        carId: car.id,
-        rating: newReview.rating,
-        comment: newReview.comment,
-        userName: newReview.userName,
-        date: new Date().toISOString(),
-      };
-
-      const docRef = await addDoc(collection(db, 'reviews'), reviewData);
-
-      // Create the complete review object with the generated ID
-      const completeReview: Review = {
-        id: docRef.id,
-        ...reviewData
-      };
-
-      // Update local state
-      const updatedReviews = [...reviews, completeReview];
-      setReviews(updatedReviews);
-
-      toast({
-        title: "Review Submitted!",
-        description: "Thank you for your feedback.",
-      });
-
-      setNewReview({ rating: 0, comment: '', userName: '' });
-      onReviewSubmitted();
-      
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit review. Please try again.",
-        variant: "destructive",
-      });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const renderStars = (rating: number, interactive = false, onClick?: (rating: number) => void) => {
+  const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, index) => (
       <Star
         key={index}
-        size={20}
+        size={16}
         className={`${
           index < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-        } ${interactive ? 'cursor-pointer hover:text-yellow-400' : ''}`}
-        onClick={() => interactive && onClick && onClick(index + 1)}
+        }`}
       />
     ));
   };
@@ -152,13 +86,27 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
                 {calculateAverageRating().toFixed(1)} out of 5
               </span>
             </div>
-            <p className="text-sm text-gray-600">Based on {reviews.length} reviews</p>
+            <p className="text-sm text-gray-600">Based on {reviews.length} verified bookings</p>
           </div>
 
           {/* Existing Reviews */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Customer Reviews</h3>
-            {reviews.length > 0 ? (
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse border-b pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-4 bg-gray-200 rounded w-20"></div>
+                      <div className="h-4 bg-gray-200 rounded w-24"></div>
+                      <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length > 0 ? (
               reviews.map((review) => (
                 <div key={review.id} className="border-b pb-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -167,56 +115,25 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ car, isOpen, onClose, onRevie
                     <span className="text-sm text-gray-500">
                       {new Date(review.date).toLocaleDateString()}
                     </span>
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Verified Booking
+                    </span>
                   </div>
                   <p className="text-gray-700">{review.comment}</p>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+              <div className="text-center py-8">
+                <p className="text-gray-500">No reviews yet.</p>
+                <p className="text-sm text-gray-400 mt-1">Reviews can only be written after booking this car.</p>
+              </div>
             )}
           </div>
 
-          {/* Add New Review Form */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
-            <form onSubmit={handleSubmitReview} className="space-y-4">
-              <div>
-                <Label>Your Name</Label>
-                <Input
-                  value={newReview.userName}
-                  onChange={(e) => setNewReview({ ...newReview, userName: e.target.value })}
-                  placeholder="Enter your name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label>Rating</Label>
-                <div className="flex gap-1 mt-1">
-                  {renderStars(newReview.rating, true, handleRatingClick)}
-                </div>
-              </div>
-              
-              <div>
-                <Label>Your Review</Label>
-                <Textarea
-                  value={newReview.comment}
-                  onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                  placeholder="Share your experience with this car..."
-                  rows={4}
-                  required
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                  Close
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="flex-1">
-                  {isSubmitting ? 'Submitting...' : 'Submit Review'}
-                </Button>
-              </div>
-            </form>
+          <div className="pt-4">
+            <Button onClick={onClose} className="w-full">
+              Close
+            </Button>
           </div>
         </div>
       </DialogContent>
