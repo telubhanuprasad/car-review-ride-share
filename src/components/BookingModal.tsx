@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 interface BookingModalProps {
@@ -16,19 +16,65 @@ interface BookingModalProps {
   onClose: () => void;
 }
 
+interface UserProfile {
+  username: string;
+  email: string;
+  phoneNumber: string;
+  profilePhoto: string;
+}
+
 const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     pickupDate: '',
     returnDate: '',
-    customerName: currentUser?.displayName || '',
+    customerName: '',
     customerEmail: currentUser?.email || '',
     customerPhone: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totalDays, setTotalDays] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+
+  // Load user profile data when modal opens and user is available
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!currentUser || !isOpen) return;
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as UserProfile;
+          setFormData(prev => ({
+            ...prev,
+            customerName: userData.username || currentUser?.displayName || '',
+            customerEmail: userData.email || currentUser?.email || '',
+            customerPhone: userData.phoneNumber || '',
+          }));
+        } else {
+          // Set default values from Firebase Auth if no profile exists
+          setFormData(prev => ({
+            ...prev,
+            customerName: currentUser?.displayName || '',
+            customerEmail: currentUser?.email || '',
+            customerPhone: '',
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        // Fallback to Firebase Auth data
+        setFormData(prev => ({
+          ...prev,
+          customerName: currentUser?.displayName || '',
+          customerEmail: currentUser?.email || '',
+          customerPhone: '',
+        }));
+      }
+    };
+
+    loadUserProfile();
+  }, [currentUser, isOpen]);
 
   // Calculate total days and price whenever dates change
   useEffect(() => {
@@ -128,7 +174,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ car, isOpen, onClose }) => 
       setFormData({
         pickupDate: '',
         returnDate: '',
-        customerName: currentUser?.displayName || '',
+        customerName: '',
         customerEmail: currentUser?.email || '',
         customerPhone: '',
       });
