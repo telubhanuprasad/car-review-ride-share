@@ -6,6 +6,7 @@ import CarCard from '@/components/CarCard';
 import BookingModal from '@/components/BookingModal';
 import ReviewModal from '@/components/ReviewModal';
 import AdminUpload from '@/components/AdminUpload';
+import AdminPanel from '@/components/AdminPanel';
 import LoginPopup from '@/components/LoginPopup';
 import SignUpPopup from '@/components/SignUpPopup';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,9 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Check if current user is admin
+  const isAdmin = currentUser?.email === 'telubhanuprasad@gmail.com';
 
   useEffect(() => {
     loadCarsData();
@@ -250,27 +254,27 @@ const Index = () => {
                   Login
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAdminPanel(!showAdminPanel)}
-                className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
-              >
-                <Settings size={16} className="mr-2" />
-                Admin
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdminPanel(!showAdminPanel)}
+                  className="rounded-full border-slate-200 bg-white/50 hover:bg-white/80 backdrop-blur-sm transition-all duration-200"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Admin
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       {/* Admin Panel */}
-      {showAdminPanel && (
+      {showAdminPanel && isAdmin && (
         <div className="container mx-auto px-6 py-6">
-          <div className="flex justify-center">
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-2 shadow-lg">
-              <AdminUpload />
-            </div>
+          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-6 shadow-lg">
+            <AdminPanel />
           </div>
         </div>
       )}
