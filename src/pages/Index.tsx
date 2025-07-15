@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Car } from '@/types/car';
@@ -165,6 +164,9 @@ const Index = () => {
     if (brandFilter !== 'all') {
       filtered = filtered.filter(car => car.brand === brandFilter);
     }
+
+    // Always sort by price from low to high after applying filters
+    filtered = filtered.sort((a, b) => a.price - b.price);
 
     setFilteredCars(filtered);
   };
