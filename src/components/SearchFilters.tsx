@@ -53,18 +53,30 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
   };
 
   const handleMinPriceChange = (value: string) => {
-    const numValue = parseInt(value) || 0;
-    if (numValue <= maxPrice) {
-      setMinPrice(numValue);
-      setPriceRange([numValue, maxPrice]);
+    if (value === '' || value === null) {
+      // If input is cleared, set to 0
+      setMinPrice(0);
+      setPriceRange([0, maxPrice]);
+    } else {
+      const numValue = parseInt(value) || 0;
+      if (numValue <= maxPrice) {
+        setMinPrice(numValue);
+        setPriceRange([numValue, maxPrice]);
+      }
     }
   };
 
   const handleMaxPriceChange = (value: string) => {
-    const numValue = parseInt(value) || maxPriceLimit;
-    if (numValue >= minPrice) {
-      setMaxPrice(numValue);
-      setPriceRange([minPrice, numValue]);
+    if (value === '' || value === null) {
+      // If input is cleared, set to maxPriceLimit
+      setMaxPrice(maxPriceLimit);
+      setPriceRange([minPrice, maxPriceLimit]);
+    } else {
+      const numValue = parseInt(value) || maxPriceLimit;
+      if (numValue >= minPrice) {
+        setMaxPrice(numValue);
+        setPriceRange([minPrice, numValue]);
+      }
     }
   };
 
@@ -130,8 +142,9 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                 <label className="text-xs text-slate-500 mb-1 block">Min Price</label>
                 <Input
                   type="number"
-                  value={minPrice}
+                  value={minPrice === 0 ? '' : minPrice}
                   onChange={(e) => handleMinPriceChange(e.target.value)}
+                  placeholder="Min"
                   className="h-10 rounded-xl border-slate-200 bg-white/60"
                   min={0}
                   max={maxPrice}
@@ -141,8 +154,9 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
                 <label className="text-xs text-slate-500 mb-1 block">Max Price</label>
                 <Input
                   type="number"
-                  value={maxPrice}
+                  value={maxPrice === maxPriceLimit ? '' : maxPrice}
                   onChange={(e) => handleMaxPriceChange(e.target.value)}
+                  placeholder="Max"
                   className="h-10 rounded-xl border-slate-200 bg-white/60"
                   min={minPrice}
                   max={maxPriceLimit}
