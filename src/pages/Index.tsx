@@ -30,6 +30,10 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [priceFilter, setPriceFilter] = useState('all');
   const [brandFilter, setBrandFilter] = useState('all');
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(500);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const [sortOrder, setSortOrder] = useState('lowToHigh');
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -39,13 +43,24 @@ const Index = () => {
   // Check if current user is admin
   const isAdmin = currentUser?.email === 'telubhanuprasad@gmail.com';
 
+  // Calculate max price limit from all cars
+  const maxPriceLimit = Math.max(...cars.map(car => car.price), 500);
+
   useEffect(() => {
     loadCarsData();
   }, []);
 
   useEffect(() => {
+    if (cars.length > 0) {
+      const maxCarPrice = Math.max(...cars.map(car => car.price));
+      setMaxPrice(maxCarPrice);
+      setPriceRange([0, maxCarPrice]);
+    }
+  }, [cars]);
+
+  useEffect(() => {
     filterCars();
-  }, [searchTerm, priceFilter, brandFilter, cars]);
+  }, [searchTerm, priceFilter, brandFilter, minPrice, maxPrice, sortOrder, cars]);
 
   // Show login/signup popup based on URL params or after 5 seconds if not logged in
   useEffect(() => {
@@ -146,27 +161,21 @@ const Index = () => {
       );
     }
 
-    if (priceFilter !== 'all') {
-      filtered = filtered.filter(car => {
-        switch (priceFilter) {
-          case 'under75':
-            return car.price < 75;
-          case '75to150':
-            return car.price >= 75 && car.price <= 150;
-          case 'over150':
-            return car.price > 150;
-          default:
-            return true;
-        }
-      });
-    }
+    // Apply price range filter
+    filtered = filtered.filter(car => 
+      car.price >= minPrice && car.price <= maxPrice
+    );
 
     if (brandFilter !== 'all') {
       filtered = filtered.filter(car => car.brand === brandFilter);
     }
 
-    // Always sort by price from low to high after applying filters
-    filtered = filtered.sort((a, b) => a.price - b.price);
+    // Apply sorting
+    if (sortOrder === 'lowToHigh') {
+      filtered = filtered.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === 'highToLow') {
+      filtered = filtered.sort((a, b) => b.price - a.price);
+    }
 
     setFilteredCars(filtered);
   };
@@ -254,6 +263,15 @@ const Index = () => {
           brandFilter={brandFilter}
           setBrandFilter={setBrandFilter}
           uniqueBrands={uniqueBrands}
+          minPrice={minPrice}
+          setMinPrice={setMinPrice}
+          maxPrice={maxPrice}
+          setMaxPrice={setMaxPrice}
+          priceRange={priceRange}
+          setPriceRange={setPriceRange}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          maxPriceLimit={maxPriceLimit}
         />
 
         <CarsGrid 
